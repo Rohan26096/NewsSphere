@@ -1,23 +1,28 @@
+
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 
 const connectDB = require("./config/db");
 
+const authRoutes = require("./routes/authRoutes");
+const newsRoutes = require("./routes/newsRoutes");
+const profileRoutes = require("./routes/profileRoutes");
+
 const app = express();
 
 // Middleware
 app.use(cors());
 app.use(express.json());
-const authRoutes = require("./routes/authRoutes");
-const newsRoutes = require("./routes/newsRoutes");
 
+// API Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/news", newsRoutes);
+app.use("/api/profiles", profileRoutes);
 
 // Test route
 app.get("/", (req, res) => {
-    res.send("News Platform API is running!");
+    res.send("NewsSphere API is running!");
 });
 
 // Health check

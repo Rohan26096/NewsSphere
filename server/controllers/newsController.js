@@ -1,8 +1,13 @@
 
 const News = require("../models/News");
+const UserProfile = require("../models/UserProfile");
 const { fetchTopHeadlines } = require("../services/gnewsService");
 
-// Get all news
+// Escape special regex characters
+const escapeRegex = (value) =>
+    value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+// GET ALL NEWS
 const getAllNews = async (req, res) => {
     try {
         const {
@@ -15,17 +20,12 @@ const getAllNews = async (req, res) => {
 
         const filter = {};
 
-        if (category) {
-            filter.category = category;
-        }
-
-        if (topic) {
-            filter.topics = topic;
-        }
+        if (category) filter.category = category;
+        if (topic) filter.topics = topic;
 
         if (search) {
             filter.title = {
-                $regex: search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+                $regex: escapeRegex(search),
                 $options: "i"
             };
         }
@@ -33,12 +33,14 @@ const getAllNews = async (req, res) => {
         const currentPage = Math.max(1, Number(page) || 1);
         const perPage = Math.min(50, Math.max(1, Number(limit) || 10));
 
-        const news = await News.find(filter)
-            .sort({ publishedAt: -1 })
-            .skip((currentPage - 1) * perPage)
-            .limit(perPage);
+        const [news, total] = await Promise.all([
+            News.find(filter)
+                .sort({ publishedAt: -1 })
+                .skip((currentPage - 1) * perPage)
+                .limit(perPage),
 
-        const total = await News.countDocuments(filter);
+            News.countDocuments(filter)
+        ]);
 
         res.status(200).json({
             success: true,
@@ -50,18 +52,20 @@ const getAllNews = async (req, res) => {
 
     } catch (error) {
         res.status(500).json({
+            success: false,
             message: error.message
         });
     }
 };
 
-// Get news by ID
+// GET NEWS BY ID
 const getNewsById = async (req, res) => {
     try {
         const news = await News.findById(req.params.id);
 
         if (!news) {
             return res.status(404).json({
+                success: false,
                 message: "News article not found"
             });
         }
@@ -73,16 +77,16 @@ const getNewsById = async (req, res) => {
 
     } catch (error) {
         res.status(400).json({
+            success: false,
             message: "Invalid news ID"
         });
     }
 };
 
-// Fetch external news from GNews
+// FETCH EXTERNAL NEWS FROM GNEWS
 const getExternalNews = async (req, res) => {
     try {
         const category = req.query.category || "general";
-
         const articles = await fetchTopHeadlines(category);
 
         res.status(200).json({
@@ -99,13 +103,10 @@ const getExternalNews = async (req, res) => {
     }
 };
 
-
-// Fetch news and save it to MongoDB
+// FETCH EXTERNAL NEWS AND SAVE TO MONGODB
 const syncExternalNews = async (req, res) => {
     try {
         const category = req.query.category || "general";
-
-        // Fetch articles from GNews
         const articles = await fetchTopHeadlines(category);
 
         if (!articles.length) {
@@ -118,7 +119,6 @@ const syncExternalNews = async (req, res) => {
             });
         }
 
-        // Prepare articles for MongoDB
         const operations = articles
             .filter(article => article.title && article.url)
             .map(article => ({
@@ -160,7 +160,6 @@ const syncExternalNews = async (req, res) => {
             });
         }
 
-        // Insert new articles or update existing ones
         const result = await News.bulkWrite(operations, {
             ordered: false
         });
@@ -183,11 +182,106 @@ const syncExternalNews = async (req, res) => {
     }
 };
 
+// GET PERSONALIZED NEWS FOR A PROFILE
+const getPersonalizedNews = async (req, res) => {
+    try {
+        const { profileId } = req.params;
+        const {
+            page = 1,
+            limit = 10
+        } = req.query;
+
+        // Find profile belonging to logged-in user
+        const profile = await UserProfile.findOne({
+            _id: profileId,
+            user: req.userId
+        });
+
+        if (!profile) {
+            return res.status(404).json({
+                success: false,
+                message: "Profile not found"
+            });
+        }
+
+        // Build topic matching conditions
+        const topicConditions = profile.topics.flatMap(topic => {
+            const regex = new RegExp(escapeRegex(topic), "i");
+
+            return [
+                { title: regex },
+                { description: regex },
+                { content: regex },
+                { topics: regex }
+            ];
+        });
+
+        // Include selected categories
+        const categoryConditions = profile.categories.map(category => ({
+            category: {
+                $regex: `^${escapeRegex(category)}$`,
+                $options: "i"
+            }
+        }));
+
+        const matchingConditions = [
+            ...topicConditions,
+            ...categoryConditions
+        ];
+
+        if (!matchingConditions.length) {
+            return res.status(200).json({
+                success: true,
+                profile: profile.name,
+                total: 0,
+                page: 1,
+                totalPages: 0,
+                news: []
+            });
+        }
+
+        const currentPage = Math.max(1, Number(page) || 1);
+        const perPage = Math.min(50, Math.max(1, Number(limit) || 10));
+
+        const filter = {
+            $or: matchingConditions
+        };
+
+        const [news, total] = await Promise.all([
+            News.find(filter)
+                .sort({ publishedAt: -1 })
+                .skip((currentPage - 1) * perPage)
+                .limit(perPage),
+
+            News.countDocuments(filter)
+        ]);
+
+        res.status(200).json({
+            success: true,
+            profile: {
+                id: profile._id,
+                name: profile.name,
+                topics: profile.topics,
+                categories: profile.categories
+            },
+            total,
+            page: currentPage,
+            totalPages: Math.ceil(total / perPage),
+            news
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
 
 module.exports = {
     getAllNews,
     getNewsById,
     getExternalNews,
     syncExternalNews,
-
+    getPersonalizedNews
 };

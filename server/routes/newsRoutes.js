@@ -2,18 +2,28 @@
 const express = require("express");
 const router = express.Router();
 
+const protect = require("../middleware/authMiddleware");
+
 const {
     getAllNews,
     getNewsById,
     getExternalNews,
-    syncExternalNews
+    syncExternalNews,
+    getPersonalizedNews
 } = require("../controllers/newsController");
 
-// External API routes must come before /:id
+// External news
 router.get("/external", getExternalNews);
 router.get("/sync", syncExternalNews);
 
-// Database routes
+// Personalized feed (authentication required)
+router.get(
+    "/personalized/:profileId",
+    protect,
+    getPersonalizedNews
+);
+
+// Database news
 router.get("/", getAllNews);
 router.get("/:id", getNewsById);
 

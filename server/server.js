@@ -10,6 +10,7 @@ const newsRoutes = require("./routes/newsRoutes");
 const profileRoutes = require("./routes/profileRoutes");
 const bookmarkRoutes = require("./routes/bookmarkRoutes");
 const highlightRoutes = require("./routes/highlightRoutes");
+const aiRoutes = require("./routes/aiRoutes");
 
 const app = express();
 
@@ -21,9 +22,9 @@ app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/news", newsRoutes);
 app.use("/api/profiles", profileRoutes);
-
 app.use("/api/bookmarks", bookmarkRoutes);
 app.use("/api/highlights", highlightRoutes);
+app.use("/api/ai", aiRoutes);
 
 // Test route
 app.get("/", (req, res) => {
@@ -42,11 +43,16 @@ app.get("/api/health", (req, res) => {
 const PORT = process.env.PORT || 5001;
 
 const startServer = async () => {
-    await connectDB();
+    try {
+        await connectDB();
 
-    app.listen(PORT, () => {
-        console.log(`Server running on http://localhost:${PORT}`);
-    });
+        app.listen(PORT, () => {
+            console.log(`Server running on http://localhost:${PORT}`);
+        });
+    } catch (error) {
+        console.error("Server startup failed:", error);
+        process.exit(1);
+    }
 };
 
 startServer();

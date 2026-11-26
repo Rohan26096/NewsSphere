@@ -1,5 +1,8 @@
 
-const fetchTopHeadlines = async (category = "general") => {
+const fetchTopHeadlines = async (
+    category = "general",
+    edition = "india"
+) => {
     try {
         const allowedCategories = [
             "general",
@@ -17,12 +20,21 @@ const fetchTopHeadlines = async (category = "general") => {
             throw new Error("Invalid news category");
         }
 
+        if (!["india", "global"].includes(edition)) {
+            throw new Error("Invalid news edition");
+        }
+
         const params = new URLSearchParams({
             category,
             lang: "en",
-            country: "in",
             max: "10"
         });
+
+        // India edition is restricted to Indian headlines.
+        // Global edition intentionally has no country restriction.
+        if (edition === "india") {
+            params.set("country", "in");
+        }
 
         const response = await fetch(
             `https://gnews.io/api/v4/top-headlines?${params}`,

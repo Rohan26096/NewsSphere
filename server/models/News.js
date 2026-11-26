@@ -61,6 +61,13 @@ const newsSchema = new mongoose.Schema(
             default: ""
         },
 
+        edition: {
+            type: String,
+            enum: ["india", "global"],
+            default: "india",
+            index: true
+        },
+
         provider: {
             type: String,
             default: ""
@@ -74,5 +81,6 @@ const newsSchema = new mongoose.Schema(
 newsSchema.index({ publishedAt: -1 });
 newsSchema.index({ category: 1, publishedAt: -1 });
 newsSchema.index({ topics: 1 });
+newsSchema.index({ edition: 1, publishedAt: -1 });
 
 module.exports = mongoose.model("News", newsSchema);

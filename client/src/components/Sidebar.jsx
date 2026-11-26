@@ -1,52 +1,106 @@
 
+import { NavLink } from "react-router-dom";
+
 import {
-  Home,
   Bookmark,
-  UserRound,
-  Settings,
-  Headphones,
   Globe,
-  PanelLeftClose
+  Headphones,
+  Home,
+  LogOut,
+  Settings,
+  UserRound,
+  MapPin,
+  Newspaper,
+  Highlighter
 } from "lucide-react";
 
-const Sidebar = () => {
+export default function Sidebar({ onLogout }) {
+  const links = [
+    {
+      to: "/",
+      label: "Home",
+      icon: Home,
+      end: true,
+    },
+    {
+      to: "/india-news",
+      label: "India News",
+      icon: MapPin,
+    },
+    {
+      to: "/global-news",
+      label: "Global News",
+      icon: Newspaper,
+    },
+    {
+      to: "/profiles",
+      label: "My Profiles",
+      icon: UserRound,
+    },
+    {
+      to: "/bookmarks",
+      label: "Bookmarks",
+      icon: Bookmark,
+    },
+    {
+      to: "/highlights",
+      label: "My Highlights",
+      icon: Highlighter
+    },
+  ];
+
   return (
     <aside className="sidebar">
-      <div className="logo">
+      <NavLink to="/" className="logo">
         <Globe size={27} />
         <span>NewsSphere</span>
-      </div>
+      </NavLink>
+
+      <div className="sidebar-label">DISCOVER</div>
 
       <nav className="sidebar-nav">
-        <a className="nav-item active" href="/">
-          <Home size={19} />
-          <span>Home</span>
-        </a>
+        {links.map(({ to, label, icon: Icon, end }) => (
+          <NavLink
+            key={to}
+            to={to}
+            end={end}
+            className={({ isActive }) =>
+              `nav-item ${isActive ? "active" : ""}`
+            }
+          >
+            <Icon size={19} />
+            <span>{label}</span>
+          </NavLink>
+        ))}
 
-        <a className="nav-item" href="#profiles">
-          <UserRound size={19} />
-          <span>My Profiles</span>
-        </a>
-
-        <a className="nav-item" href="#bookmarks">
-          <Bookmark size={19} />
-          <span>Bookmarks</span>
-        </a>
-
-        <a className="nav-item" href="#briefings">
+        <div className="nav-item nav-disabled">
           <Headphones size={19} />
           <span>Briefings</span>
-        </a>
+          <small>Soon</small>
+        </div>
       </nav>
 
       <div className="sidebar-bottom">
-        <a className="nav-item" href="#settings">
+        <div className="sidebar-label">PREFERENCES</div>
+
+        <div className="nav-item nav-disabled">
           <Settings size={19} />
           <span>Settings</span>
-        </a>
+        </div>
+
+        <button
+          className="nav-item logout-button"
+          onClick={onLogout}
+        >
+          <LogOut size={19} />
+          <span>Sign out</span>
+        </button>
+      </div>
+
+      <div className="sidebar-footer">
+        <span className="status-dot" />
+        NewsSphere is ready
       </div>
     </aside>
   );
-};
-
-export default Sidebar;
+}

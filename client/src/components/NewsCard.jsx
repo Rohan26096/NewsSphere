@@ -1,118 +1,102 @@
 
 import { useState } from "react";
-import { Bookmark, ExternalLink } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Bookmark, ArrowUpRight, Clock } from "lucide-react";
 
-function NewsCard({
+export default function NewsCard({
     article,
+    featured = false,
     isBookmarked = false,
     onToggleBookmark
 }) {
-    const [bookmarkLoading, setBookmarkLoading] = useState(false);
+    const [bookmarking, setBookmarking] = useState(false);
+    const navigate = useNavigate();
 
-    const formattedDate = article.publishedAt
+    const publishedDate = article.publishedAt
         ? new Date(article.publishedAt).toLocaleDateString("en-IN", {
-              day: "numeric",
-              month: "short",
-              year: "numeric"
-          })
+            day: "numeric",
+            month: "short",
+            year: "numeric"
+        })
         : "Recently published";
 
     const handleBookmark = async () => {
-        if (bookmarkLoading || !onToggleBookmark) return;
+        if (bookmarking) return;
 
-        setBookmarkLoading(true);
+        setBookmarking(true);
 
         try {
             await onToggleBookmark(article._id);
         } finally {
-            setBookmarkLoading(false);
+            setBookmarking(false);
         }
     };
 
     return (
-        <article className="news-card">
-            <a
-                href={article.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="news-image-wrapper"
-                aria-label={`Read ${article.title}`}
-            >
+        <article className={`news-card ${featured ? "featured-card" : ""}`}>
+            <div className="news-image-wrapper">
                 {article.image ? (
                     <img
                         src={article.image}
                         alt={article.title}
                         className="news-image"
                         loading="lazy"
-                        onError={(event) => {
-                            event.currentTarget.style.display = "none";
-                        }}
                     />
                 ) : (
                     <div className="news-image-placeholder">
-                        <span>NewsSphere</span>
+                        NewsSphere
                     </div>
                 )}
-            </a>
+
+                {article.category && (
+                    <span className="news-category">
+                        {article.category}
+                    </span>
+                )}
+
+                <button
+                    className={`bookmark-button ${isBookmarked ? "bookmarked" : ""}`}
+                    onClick={handleBookmark}
+                    disabled={bookmarking}
+                    aria-label={
+                        isBookmarked ? "Remove bookmark" : "Bookmark article"
+                    }
+                    title={
+                        isBookmarked ? "Remove bookmark" : "Save article"
+                    }
+                >
+                    <Bookmark
+                        size={18}
+                        fill={isBookmarked ? "currentColor" : "none"}
+                    />
+                </button>
+            </div>
 
             <div className="news-card-content">
                 <div className="news-meta">
-                    <span className="news-source">
-                        {article.source?.name || "News Source"}
-                    </span>
-
-                    <span className="news-date">
-                        {formattedDate}
+                    <span>{article.source?.name || "Unknown source"}</span>
+                    <span className="meta-dot">•</span>
+                    <span>
+                        <Clock size={12} />
+                        {publishedDate}
                     </span>
                 </div>
 
                 <h3>{article.title}</h3>
 
-                <p className="news-description">
+                <p>
                     {article.description ||
-                        "Read the full article for more details."}
+                        "Open this article to read the full story."}
                 </p>
 
-                <div className="news-card-footer">
-                    <button
-                        type="button"
-                        className={`news-action-btn ${
-                            isBookmarked ? "bookmarked" : ""
-                        }`}
-                        onClick={handleBookmark}
-                        disabled={bookmarkLoading}
-                        aria-label={
-                            isBookmarked
-                                ? "Remove bookmark"
-                                : "Bookmark article"
-                        }
-                        aria-pressed={isBookmarked}
-                        title={
-                            isBookmarked
-                                ? "Remove bookmark"
-                                : "Save article"
-                        }
-                    >
-                        <Bookmark
-                            size={18}
-                            fill={isBookmarked ? "currentColor" : "none"}
-                        />
-                    </button>
-
-                    <a
-                        href={article.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="news-action-btn"
-                        aria-label="Read full article"
-                        title="Read full article"
-                    >
-                        <ExternalLink size={18} />
-                    </a>
-                </div>
+                <button
+                    className="read-article-link"
+                    onClick={() => navigate(`/article/${article._id}`)}
+                >
+                    Read article
+                    <ArrowUpRight size={15} />
+                </button>
             </div>
         </article>
     );
 }
-
-export default NewsCard;
